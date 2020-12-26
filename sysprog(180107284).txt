@@ -1,0 +1,45 @@
+#! /bin/bash
+declare -A mainRes
+while IFS= read -r i
+do
+    url=$(echo $i | cut -d' ' -f7)
+    errors=$(echo $i | cut -d'"' -f3 | cut -d' ' -f2 | cut -c1)
+
+    if [[ -v mainRes[$url] ]]; then
+        if [ $errors == '4' ]; then
+            mainRes[$url]=$(( mainRes[$url] + 1))
+        fi
+    else
+        if [ $errors == '4' ]; then
+            mainRes[$url]=1
+        fi
+    fi
+done < $2
+declare -A result
+total=0
+for (( c=0; c<$1; c++ ))
+do
+    maxkey=''
+    maxval=-1
+
+    for key in ${!mainRes[@]}
+    do
+        if [[ ${mainRes[$key]} -gt $maxval ]]; then
+            maxval=${mainRes[$key]}
+            maxkey=$key
+        fi
+    done
+    result[$maxkey]=$maxval
+    total=$(( $total + $maxval ))
+    mainRes[$maxkey]=-1
+done
+round() {
+  printf "%.1f" "${1}"
+}
+for key in ${!result[@]}
+do
+    url=$key
+    num=${result[$key]}
+    pct=$(echo "scale=2; $num * 100.0 / $total" | bc )
+    echo "$url - $num -  $(round $pct)%"
+done | sort -rn -k3
